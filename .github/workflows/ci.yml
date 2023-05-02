@@ -55,8 +55,17 @@ jobs:
         # 2.086.1 on 20.04: ditto
         # 2.103.0 on 20.04: ditto
         - SWIGLANG: d
-          VER: '2.079.1'
+          VER: 'ldc'
           os: ubuntu-20.04
+        - SWIGLANG: d
+          VER: 'ldc'
+          os: ubuntu-22.04
+        - SWIGLANG: d
+          VER: 'gdc'
+          os: ubuntu-20.04
+        - SWIGLANG: d
+          VER: 'gdc'
+          os: ubuntu-22.04
       # Run all of them, as opposed to aborting when one fails
       fail-fast: false
 

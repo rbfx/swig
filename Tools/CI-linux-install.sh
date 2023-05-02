@@ -22,8 +22,7 @@ case "$SWIGLANG" in
 		$RETRY sudo apt-get -qq install mono-devel
 		;;
 	"d")
-		$RETRY wget http://downloads.dlang.org/releases/2.x/${VER}/dmd_${VER}-0_amd64.deb
-		$RETRY sudo dpkg -i dmd_${VER}-0_amd64.deb
+		$RETRY sudo apt-get -qq install "$VER"
 		;;
 	"go")
 		if [[ "$VER" ]]; then
