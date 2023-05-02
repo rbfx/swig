@@ -705,7 +705,7 @@ _ACEOF
   fi
 
   if test -z "$D2COMPILERBIN" ; then
-    AC_CHECK_PROGS(D2COMPILER, dmd gdmd ldmd2 ldc2)
+    AC_CHECK_PROGS(D2COMPILER, dmd gdmd ldmd2 ldc2 gdc)
 
     if test -n "$D2COMPILER" ; then
       AC_MSG_CHECKING(whether the D2 compiler works)
