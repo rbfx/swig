@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#ifdef __cplusplus
+#include <typeinfo> // rbfx
+#endif
 %}
 
 #if !defined(SWIG_CSHARP_NO_EXCEPTION_HELPER)
@@ -128,9 +131,21 @@ SWIGEXPORT void SWIGSTDCALL SWIGRegisterExceptionArgumentCallbacks_$module(
 %}
 
 %pragma(csharp) imclasscode=%{
+  public const string DllImportModule = "$dllimport_module";
+#if NET47 || NETSTANDARD2_1 || NETCOREAPP3_0 || NET5_0
+    public const global::System.Runtime.InteropServices.UnmanagedType LPStr = global::System.Runtime.InteropServices.UnmanagedType.LPUTF8Str;
+#else
+    public const global::System.Runtime.InteropServices.UnmanagedType LPStr = global::System.Runtime.InteropServices.UnmanagedType.LPStr;
+#endif
   protected class SWIGExceptionHelper {
 
+#if __IOS__
+    [global::ObjCRuntime.MonoNativeFunctionWrapper]
+#endif
     public delegate void ExceptionDelegate(string message);
+#if __IOS__
+    [global::ObjCRuntime.MonoNativeFunctionWrapper]
+#endif
     public delegate void ExceptionArgumentDelegate(string message, string paramName);
 
     static ExceptionDelegate applicationDelegate = new ExceptionDelegate(SetPendingApplicationException);
@@ -149,7 +164,7 @@ SWIGEXPORT void SWIGSTDCALL SWIGRegisterExceptionArgumentCallbacks_$module(
     static ExceptionArgumentDelegate argumentNullDelegate = new ExceptionArgumentDelegate(SetPendingArgumentNullException);
     static ExceptionArgumentDelegate argumentOutOfRangeDelegate = new ExceptionArgumentDelegate(SetPendingArgumentOutOfRangeException);
 
-    [global::System.Runtime.InteropServices.DllImport("$dllimport", EntryPoint="SWIGRegisterExceptionCallbacks_$module")]
+    [global::System.Runtime.InteropServices.DllImport($dllimport, EntryPoint="SWIGRegisterExceptionCallbacks_$module")]
     public static extern void SWIGRegisterExceptionCallbacks_$module(
                                 ExceptionDelegate applicationDelegate,
                                 ExceptionDelegate arithmeticDelegate,
@@ -163,54 +178,96 @@ SWIGEXPORT void SWIGSTDCALL SWIGRegisterExceptionArgumentCallbacks_$module(
                                 ExceptionDelegate overflowDelegate, 
                                 ExceptionDelegate systemExceptionDelegate);
 
-    [global::System.Runtime.InteropServices.DllImport("$dllimport", EntryPoint="SWIGRegisterExceptionArgumentCallbacks_$module")]
+    [global::System.Runtime.InteropServices.DllImport($dllimport, EntryPoint="SWIGRegisterExceptionArgumentCallbacks_$module")]
     public static extern void SWIGRegisterExceptionCallbacksArgument_$module(
                                 ExceptionArgumentDelegate argumentDelegate,
                                 ExceptionArgumentDelegate argumentNullDelegate,
                                 ExceptionArgumentDelegate argumentOutOfRangeDelegate);
 
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionDelegate))]
+#endif
     static void SetPendingApplicationException(string message) {
       SWIGPendingException.Set(new global::System.ApplicationException(message, SWIGPendingException.Retrieve()));
     }
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionDelegate))]
+#endif
     static void SetPendingArithmeticException(string message) {
       SWIGPendingException.Set(new global::System.ArithmeticException(message, SWIGPendingException.Retrieve()));
     }
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionDelegate))]
+#endif
     static void SetPendingDivideByZeroException(string message) {
       SWIGPendingException.Set(new global::System.DivideByZeroException(message, SWIGPendingException.Retrieve()));
     }
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionDelegate))]
+#endif
     static void SetPendingIndexOutOfRangeException(string message) {
       SWIGPendingException.Set(new global::System.IndexOutOfRangeException(message, SWIGPendingException.Retrieve()));
     }
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionDelegate))]
+#endif
     static void SetPendingInvalidCastException(string message) {
       SWIGPendingException.Set(new global::System.InvalidCastException(message, SWIGPendingException.Retrieve()));
     }
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionDelegate))]
+#endif
     static void SetPendingInvalidOperationException(string message) {
       SWIGPendingException.Set(new global::System.InvalidOperationException(message, SWIGPendingException.Retrieve()));
     }
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionDelegate))]
+#endif
     static void SetPendingIOException(string message) {
       SWIGPendingException.Set(new global::System.IO.IOException(message, SWIGPendingException.Retrieve()));
     }
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionDelegate))]
+#endif
     static void SetPendingNullReferenceException(string message) {
       SWIGPendingException.Set(new global::System.NullReferenceException(message, SWIGPendingException.Retrieve()));
     }
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionDelegate))]
+#endif
     static void SetPendingOutOfMemoryException(string message) {
       SWIGPendingException.Set(new global::System.OutOfMemoryException(message, SWIGPendingException.Retrieve()));
     }
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionDelegate))]
+#endif
     static void SetPendingOverflowException(string message) {
       SWIGPendingException.Set(new global::System.OverflowException(message, SWIGPendingException.Retrieve()));
     }
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionDelegate))]
+#endif
     static void SetPendingSystemException(string message) {
       SWIGPendingException.Set(new global::System.SystemException(message, SWIGPendingException.Retrieve()));
     }
 
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionArgumentDelegate))]
+#endif
     static void SetPendingArgumentException(string message, string paramName) {
       SWIGPendingException.Set(new global::System.ArgumentException(message, paramName, SWIGPendingException.Retrieve()));
     }
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionArgumentDelegate))]
+#endif
     static void SetPendingArgumentNullException(string message, string paramName) {
       global::System.Exception e = SWIGPendingException.Retrieve();
       if (e != null) message = message + " Inner Exception: " + e.Message;
       SWIGPendingException.Set(new global::System.ArgumentNullException(paramName, message));
     }
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(ExceptionArgumentDelegate))]
+#endif
     static void SetPendingArgumentOutOfRangeException(string message, string paramName) {
       global::System.Exception e = SWIGPendingException.Retrieve();
       if (e != null) message = message + " Inner Exception: " + e.Message;
@@ -296,12 +353,18 @@ static SWIG_CSharpStringHelperCallback SWIG_csharp_string_callback = NULL;
 %pragma(csharp) imclasscode=%{
   protected class SWIGStringHelper {
 
+#if __IOS__
+    [global::ObjCRuntime.MonoNativeFunctionWrapper]
+#endif
     public delegate string SWIGStringDelegate(string message);
     static SWIGStringDelegate stringDelegate = new SWIGStringDelegate(CreateString);
 
-    [global::System.Runtime.InteropServices.DllImport("$dllimport", EntryPoint="SWIGRegisterStringCallback_$module")]
+    [global::System.Runtime.InteropServices.DllImport($dllimport, EntryPoint="SWIGRegisterStringCallback_$module")]
     public static extern void SWIGRegisterStringCallback_$module(SWIGStringDelegate stringDelegate);
 
+#if __IOS__
+    [global::ObjCRuntime.MonoPInvokeCallback(typeof(SWIGStringDelegate))]
+#endif
     static string CreateString(string cString) {
       return cString;
     }
@@ -337,3 +400,44 @@ SWIGEXPORT void SWIGSTDCALL SWIGRegisterStringCallback_$module(SWIG_CSharpString
 
 #define SWIG_contract_assert(nullreturn, expr, msg) if (!(expr)) {SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentOutOfRangeException, msg, ""); return nullreturn; } else
 %}
+
+// rbfx
+%pragma(csharp) imclasscode=%{
+    internal class OverrideNativeAttribute : global::System.Attribute
+    {
+    }
+
+    internal static bool MethodHasAttribute<T>(global::System.Reflection.MethodInfo method) where T : global::System.Attribute
+    {
+        var attributes = method.GetCustomAttributes(typeof(T), true);
+        return attributes.Length > 0;
+    }
+
+    internal static bool SwigDerivedClassHasMethod(object instance, string methodName, global::System.Type classType, global::System.Type[] methodTypes) {
+      global::System.Reflection.MethodInfo methodInfo = instance.GetType().GetMethod(
+          methodName, global::System.Reflection.BindingFlags.Public |
+                      global::System.Reflection.BindingFlags.NonPublic |
+                      global::System.Reflection.BindingFlags.Instance, null, methodTypes, null);
+      bool hasDerivedMethod = methodInfo.IsVirtual && !methodInfo.IsAbstract &&
+                              (methodInfo.DeclaringType.IsSubclassOf(classType) || methodInfo.DeclaringType == classType) &&
+                              (methodInfo.DeclaringType != methodInfo.GetBaseDefinition().DeclaringType || MethodHasAttribute<OverrideNativeAttribute>(methodInfo));
+      /* Could add this code to cover corner case where the GetMethod() returns a method which allows type
+       * promotion, eg it will return foo(double), if looking for foo(int).
+       if (hasDerivedMethod) {
+         hasDerivedMethod = false;
+         if (methodInfo != null) {
+           hasDerivedMethod = true;
+           ParameterInfo[] parameterArray1 = methodInfo.GetParameters();
+           for (int i=0; i<methodTypes.Length; i++) {
+             if (parameterArray1[0].ParameterType != methodTypes[0]) {
+               hasDerivedMethod = false;
+               break;
+             }
+           }
+         }
+       }
+       */
+      return hasDerivedMethod;
+    }
+%}
+// /rbfx

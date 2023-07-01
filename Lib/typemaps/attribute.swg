@@ -66,10 +66,10 @@
   Use %attribute2 instead of %attribute to indicate that reference-pointer
   translation is required. You use %attribute2 instead of %attribute in
   cases like this:
- 
+
   %attribute2(MyClass, MyFoo, Foo, GetFoo, SetFoo);
   %inline %{
-    struct MyFoo { 
+    struct MyFoo {
       int x;
     };
     class MyClass {
@@ -98,8 +98,8 @@
   argument, otherwise the macro will get confused by the comma.
 
   The %attributeval is the same as %attribute, but should be used when the type
-  is a class/struct (ie a non-primitive type) and when the get and set methods 
-  return/pass by value. The following is very similar to the above example, but 
+  is a class/struct (ie a non-primitive type) and when the get and set methods
+  return/pass by value. The following is very similar to the above example, but
   note that the access is by value rather than reference.
 
     %attributeval(MyClassVal, MyFoo, ReadWriteFoo, GetFoo, SetFoo);
@@ -111,7 +111,7 @@
 	MyFoo GetFoo() { return foo; }
 	void SetFoo(MyFoo other) { foo = other; }
       };
-    %} 
+    %}
 
   The %attributestring is the same as %attributeval, but should be used for string
   class types, which are unusual as they are a class on the C++ side, but normally an
@@ -128,7 +128,7 @@
 	std::string GetString() { return str; }
 	void SetString(std::string other) { str = other; }
       };
-    %} 
+    %}
 
   The %attributestring also works for class types that have %naturalvar turned
   on and so is also useful for shared_ptr which has %naturalvar turned on in %shared_ptr.

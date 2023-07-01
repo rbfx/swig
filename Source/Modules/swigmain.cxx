@@ -51,11 +51,14 @@ extern "C" {
    list sorted alphabetically. */
 
 static TargetLanguageModule modules[] = {
+#ifdef WITHOUT_RBFX
   {"-allegrocl", NULL, "ALLEGROCL", Disabled},
   {"-chicken", NULL, "CHICKEN", Disabled},
   {"-clisp", NULL, "CLISP", Disabled},
   {"-cffi", NULL, "CFFI", Disabled},
+#endif
   {"-csharp", swig_csharp, "C#", Supported},
+#ifdef WITHOUT_RBFX
   {"-d", swig_d, "D", Supported},
   {"-go", swig_go, "Go", Supported},
   {"-guile", swig_guile, "Guile", Supported},
@@ -80,6 +83,7 @@ static TargetLanguageModule modules[] = {
   {"-tcl", swig_tcl, NULL, Supported},
   {"-tcl8", swig_tcl, "Tcl 8", Supported},
   {"-uffi", NULL, "Common Lisp / UFFI", Disabled},
+#endif
   {"-xml", swig_xml, "XML", Supported},
   {NULL, NULL, NULL, Disabled}
 };

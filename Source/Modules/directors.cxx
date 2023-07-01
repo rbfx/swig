@@ -57,7 +57,7 @@ String *Swig_class_declaration(Node *n, String *name) {
   }
   String *result = NewString("");
   String *kind = Getattr(n, "kind");
-  Printf(result, "%s %s", kind, name);
+  Printf(result, "%s SWIGEXPORT %s", kind, name);   // rbfx
   return result;
 }
 
@@ -207,7 +207,7 @@ void Swig_director_emit_dynamic_cast(Node *n, Wrapper *f) {
     dirname = Language::instance()->directorClassName(parent);
     dirdecl = NewStringf("%s *darg = 0", dirname);
     Wrapper_add_local(f, "darg", dirdecl);
-    Printf(f->code, "darg = dynamic_cast<%s *>(arg1);\n", dirname);
+    Printf(f->code, "darg = (%s *)(arg1);\n", dirname); // rbfx: fix https://github.com/swig/swig/issues/1326
     Delete(dirname);
     Delete(dirdecl);
   }

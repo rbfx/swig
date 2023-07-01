@@ -251,15 +251,15 @@
                        SWIG_SHARED_PTR_QNAMESPACE::shared_ptr< CONST TYPE > *,
                        SWIG_SHARED_PTR_QNAMESPACE::shared_ptr< CONST TYPE > *& "($iminput == global::System.IntPtr.Zero) ? null : new $typemap(cstype, TYPE)($iminput, true)"
 
-
+// rbfx: $directorsetup addition.
 // Proxy classes (base classes, ie, not derived classes)
-%typemap(csbody) TYPE %{
+%typemap(csbody, directorsetup="\n    SetupSwigDirector();") TYPE %{
   private global::System.Runtime.InteropServices.HandleRef swigCPtr;
   private bool swigCMemOwnBase;
 
   PTRCTOR_VISIBILITY $csclassname(global::System.IntPtr cPtr, bool cMemoryOwn) {
     swigCMemOwnBase = cMemoryOwn;
-    swigCPtr = new global::System.Runtime.InteropServices.HandleRef(this, cPtr);
+    swigCPtr = new global::System.Runtime.InteropServices.HandleRef(this, cPtr);$directorsetup
   }
 
   CPTR_VISIBILITY static global::System.Runtime.InteropServices.HandleRef getCPtr($csclassname obj) {
@@ -268,13 +268,13 @@
 %}
 
 // Derived proxy classes
-%typemap(csbody_derived) TYPE %{
+%typemap(csbody_derived, directorsetup="\n    SetupSwigDirector();") TYPE %{
   private global::System.Runtime.InteropServices.HandleRef swigCPtr;
   private bool swigCMemOwnDerived;
 
   PTRCTOR_VISIBILITY $csclassname(global::System.IntPtr cPtr, bool cMemoryOwn) : base($imclassname.$csclazznameSWIGSmartPtrUpcast(cPtr), true) {
     swigCMemOwnDerived = cMemoryOwn;
-    swigCPtr = new global::System.Runtime.InteropServices.HandleRef(this, cPtr);
+    swigCPtr = new global::System.Runtime.InteropServices.HandleRef(this, cPtr);$directorsetup
   }
 
   CPTR_VISIBILITY static global::System.Runtime.InteropServices.HandleRef getCPtr($csclassname obj) {

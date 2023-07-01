@@ -17,17 +17,17 @@
 */
 
 %include <csharp/csharpkw.swg>
-%include <d/dkw.swg>
-%include <go/gokw.swg>
-%include <java/javakw.swg>
-%include <lua/luakw.swg>
-%include <ocaml/ocamlkw.swg>
-%include <perl5/perlkw.swg>
-%include <php/phpkw.swg>
-%include <python/pythonkw.swg>
-%include <r/rkw.swg>
-%include <ruby/rubykw.swg>
-%include <tcl/tclkw.swg>
+//%include <d/dkw.swg>
+//%include <go/gokw.swg>
+//%include <java/javakw.swg>
+//%include <lua/luakw.swg>
+//%include <ocaml/ocamlkw.swg>
+//%include <perl5/perlkw.swg>
+//%include <php/phpkw.swg>
+//%include <python/pythonkw.swg>
+//%include <r/rkw.swg>
+//%include <ruby/rubykw.swg>
+//%include <tcl/tclkw.swg>
 
 
 #endif //__Lib_allkw_swg__

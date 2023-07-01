@@ -61,6 +61,9 @@ class CSHARP:public Language {
   String *module_class_constants_code;
   String *enum_code;
   String *dllimport;		// DllImport attribute name
+#ifndef WITHOUT_RBFX
+  String *dllimport_module;		// Variable used in DllImport attribute
+#endif
   String *namespce;		// Optional namespace name
   String *imclass_imports;	//intermediary class imports from %pragma
   String *module_imports;	//module imports from %pragma
@@ -71,6 +74,12 @@ class CSHARP:public Language {
   String *imclass_class_modifiers;	//class modifiers for intermediary class overridden by %pragma
   String *module_class_modifiers;	//class modifiers for module class overridden by %pragma
   String *upcasts_code;		//C++ casts for inheritance hierarchies C++ code
+#ifndef WITHOUT_RBFX
+  String *typeid_imcode;    //C# code with typeid registrations
+  String *typeid_cppcode;    //C++ code with typeid functions
+  String *director_override_status;	// Director overridden method status
+  String *director_override_status_init;	// Director overriden status initialization
+#endif
   String *imclass_cppcasts_code;	//C++ casts up inheritance hierarchies intermediary class code
   String *director_callback_typedefs;	// Director function pointer typedefs for callbacks
   String *director_callbacks;	// Director callback function pointer member variables
@@ -146,6 +155,12 @@ public:
       imclass_class_modifiers(NULL),
       module_class_modifiers(NULL),
       upcasts_code(NULL),
+#ifndef WITHOUT_RBFX
+      typeid_imcode(NULL),
+      typeid_cppcode(NULL),
+      director_override_status(NULL),
+      director_override_status_init(NULL),
+#endif
       imclass_cppcasts_code(NULL),
       director_callback_typedefs(NULL),
       director_callbacks(NULL),
@@ -388,6 +403,12 @@ public:
     module_class_modifiers = NewString("");
     imclass_imports = NewString("");
     imclass_cppcasts_code = NewString("");
+#ifndef WITHOUT_RBFX
+    director_override_status = NewString("");
+    director_override_status_init = NewString("");
+    typeid_imcode = NewString("");
+    typeid_cppcode = NewString("");
+#endif
     director_connect_parms = NewString("");
     upcasts_code = NewString("");
     dmethods_seq = NewList();
@@ -397,6 +418,14 @@ public:
     if (!dllimport)
       dllimport = Copy(module_class_name);
 
+#ifndef WITHOUT_RBFX
+    dllimport_module = Copy(dllimport);
+    Delete(dllimport);
+    dllimport = NewString("");
+    Printf(dllimport, "global::%s.%s.DllImportModule", namespce, imclass_name);
+#else
+    dllimport_var = Copy(dllimport);
+#endif
     Swig_banner(f_begin);
 
     Printf(f_runtime, "\n\n#ifndef SWIGCSHARP\n#define SWIGCSHARP\n#endif\n\n");
@@ -471,9 +500,25 @@ public:
       // Add the intermediary class methods
       Replaceall(imclass_class_code, "$module", module_class_name);
       Replaceall(imclass_class_code, "$imclassname", imclass_name);
+#ifndef WITHOUT_RBFX
+      Replaceall(imclass_class_code, "$dllimport_module", dllimport_module);
+#endif
       Replaceall(imclass_class_code, "$dllimport", dllimport);
       Printv(f_im, imclass_class_code, NIL);
       Printv(f_im, imclass_cppcasts_code, NIL);
+
+#ifndef WITHOUT_RBFX
+      // Type registration
+      if (CPlusPlus && typeid_imcode) {
+        Printv(f_im, "\n  public static global::System.Collections.Generic.Dictionary<global::System.IntPtr, "
+                     "global::System.Type> SWIGTypeRegistry;\n", NIL);
+        Printv(f_im, "  public static void SWIGInitializeTypeRegistry() {\n", NIL);
+        Printv(f_im, "    SWIGTypeRegistry = new global::System.Collections.Generic.Dictionary<"
+                     "global::System.IntPtr, global::System.Type>();\n", NIL);
+        Printv(f_im, typeid_imcode, NIL);
+        Printv(f_im, "  }\n", NIL);
+      }
+#endif
 
       // Finish off the class
       Printf(f_im, "}\n");
@@ -509,6 +554,10 @@ public:
       Replaceall(module_class_code, "$imclassname", imclass_name);
       Replaceall(module_class_constants_code, "$imclassname", imclass_name);
 
+#ifndef WITHOUT_RBFX
+      Replaceall(module_class_code, "$dllimport_module", dllimport_module);
+      Replaceall(module_class_constants_code, "$dllimport_module", dllimport_module);
+#endif
       Replaceall(module_class_code, "$dllimport", dllimport);
       Replaceall(module_class_constants_code, "$dllimport", dllimport);
 
@@ -531,6 +580,13 @@ public:
       Printv(f_wrappers, upcasts_code, NIL);
 
     Printf(f_wrappers, "#ifdef __cplusplus\n");
+
+#ifndef WITHOUT_RBFX
+    if (CPlusPlus && typeid_cppcode) {
+      Printv(f_wrappers, typeid_cppcode, NIL);
+    }
+#endif
+
     Printf(f_wrappers, "}\n");
     Printf(f_wrappers, "#endif\n");
 
@@ -596,6 +652,14 @@ public:
     imclass_cppcasts_code = NULL;
     Delete(upcasts_code);
     upcasts_code = NULL;
+#ifndef WITHOUT_RBFX
+    Delete(typeid_imcode);
+    typeid_imcode = NULL;
+    Delete(typeid_cppcode);
+    typeid_cppcode = NULL;
+    Delete(dllimport_module);
+    dllimport_module = NULL;
+#endif
     Delete(dmethods_seq);
     dmethods_seq = NULL;
     Delete(dmethods_table);
@@ -846,7 +910,7 @@ public:
       }
     }
 
-    Printv(imclass_class_code, "\n  [global::System.Runtime.InteropServices.DllImport(\"", dllimport, "\", EntryPoint=\"", wname, "\")]\n", NIL);
+    Printv(imclass_class_code, "\n  [global::System.Runtime.InteropServices.DllImport(", dllimport, ", EntryPoint=\"", wname, "\")]\n", NIL);
 
     if (im_outattributes)
       Printf(imclass_class_code, "  %s\n", im_outattributes);
@@ -1533,7 +1597,7 @@ public:
       if (classname_substituted_flag) {
 	if (SwigType_isenum(t)) {
 	  // This handles wrapping of inline initialised const enum static member variables (not when wrapping enum items - ignored later on)
-	  Printf(constants_code, "(%s)%s.%s();\n", return_type, full_imclass_name, Swig_name_get(getNSpace(), symname));
+	  Printf(constants_code, "(%s)%s.%s();\n", return_type, full_imclass_name ? full_imclass_name : imclass_name, Swig_name_get(getNSpace(), symname)); // rbfx fix
 	} else {
 	  // This handles function pointers using the %constant directive
 	  Printf(constants_code, "new %s(%s.%s(), false);\n", return_type, full_imclass_name ? full_imclass_name : imclass_name, Swig_name_get(getNSpace(), symname));
@@ -1589,8 +1653,36 @@ public:
     String *section = Getattr(n, "section");
     Replaceall(code, "$module", module_class_name);
     Replaceall(code, "$imclassname", imclass_name);
+#ifndef WITHOUT_RBFX
+    Replaceall(code, "$dllimport_module", dllimport_module);
+#endif
     Replaceall(code, "$dllimport", dllimport);
 
+#ifndef WITHOUT_RBFX
+    // %feature("nocsattribute", "1")
+    //  %insert("proxycode", cls="csattribute", depends1=, depends2=)
+    String *options = Getattr(n, "options");
+    if (options) {
+        String *cls = Getattr(options, "cls");
+        String *noclsname = NewStringf("no%s", cls);
+        
+        for (int i = 1; ; i++) {
+            String *pname = NewStringf("depends%d", i);
+            String *depends = Getattr(options, pname);
+            Delete(pname);
+            if (depends) {
+                Node* node = Swig_symbol_clookup(depends, Getattr(n, "sym:symtab"));
+                String* nocls = node ? Getattr(node, noclsname) : 0;
+                if (node == 0 || GetFlag(node, "feature:ignore") || (nocls && Cmp(nocls, "1") == 0))
+                    return ret;
+            } else {
+                break;
+            }
+        }
+        Delete(noclsname);
+    }
+#endif    
+    
     if (!ImportMode && (Cmp(section, "proxycode") == 0)) {
       if (proxy_class_code) {
 	Swig_typemap_replace_embedded_typemap(code, n);
@@ -1655,8 +1747,15 @@ public:
 	} else if (Strcmp(code, "modulecode") == 0) {
 	  Printf(module_class_code, "%s\n", strvalue);
 	} else if (Strcmp(code, "moduleimports") == 0) {
+#ifndef WITHOUT_RBFX
+      // Append when using %pragma(csharp) moduleimports instead of replacing.
+      String* new_imports = NewStringf("%s%s", module_imports, strvalue);
+      Delete(module_imports);
+      module_imports = new_imports;
+#else
 	  Delete(module_imports);
 	  module_imports = Copy(strvalue);
+#endif
 	} else if (Strcmp(code, "moduleinterfaces") == 0) {
 	  Delete(module_interfaces);
 	  module_interfaces = Copy(strvalue);
@@ -1752,10 +1851,13 @@ public:
   void upcastsCode(SwigType *smart, String *upcast_method_name, String *c_classname, String *c_baseclass) {
     String *wname = Swig_name_wrapper(upcast_method_name);
 
-    Printv(imclass_cppcasts_code, "\n  [global::System.Runtime.InteropServices.DllImport(\"", dllimport, "\", EntryPoint=\"", wname, "\")]\n", NIL);
+    Printv(imclass_cppcasts_code, "\n  [global::System.Runtime.InteropServices.DllImport(", dllimport, ", EntryPoint=\"", wname, "\")]\n", NIL);
     Printf(imclass_cppcasts_code, "  public static extern global::System.IntPtr %s(global::System.IntPtr jarg1);\n", upcast_method_name);
 
     Replaceall(imclass_cppcasts_code, "$csclassname", proxy_class_name);
+#ifndef WITHOUT_RBFX
+    Replaceall(imclass_cppcasts_code, "$nspace", namespce);
+#endif
 
     if (smart) {
       SwigType *bsmart = Copy(smart);
@@ -1866,11 +1968,33 @@ public:
     if (csattributes && *Char(csattributes))
       Printf(proxy_class_def, "%s\n", csattributes);
 
+#ifndef WITHOUT_RBFX
+    attributes = NewHash();
+    String* csbody_tm = Copy(typemapLookup(n, derived ? "csbody_derived" : "csbody", typemap_lookup_type, WARN_CSHARP_TYPEMAP_CSBODY_UNDEF, attributes));
+    if (!feature_director) {
+      Replaceall(csbody_tm, "$directorsetup", "");
+    } else {
+      String *setup_attr = Getattr(attributes, derived ? "tmap:csbody_derived:directorsetup" : "tmap:csbody:directorsetup");
+
+      if (setup_attr) {
+        Replaceall(csbody_tm, "$directorsetup", setup_attr);
+      } else {
+        Swig_warning(WARN_CSHARP_NO_DIRECTORCONNECT_ATTR, input_file, line_number, "\"directorsetup\" attribute missing in %s \"%s\" typemap.\n",
+        Getattr(n, "name"), derived ? "csbody_derived" : "csbody");
+        Replaceall(csbody_tm, "$directorsetup", "");
+      }
+    }
+    Delete(attributes);
+#endif
     Printv(proxy_class_def, typemapLookup(n, "csclassmodifiers", typemap_lookup_type, WARN_CSHARP_TYPEMAP_CLASSMOD_UNDEF),	// Class modifiers
 	   " $csclassname",	// Class name and base class
 	   (*Char(wanted_base) || *Char(interface_list)) ? " : " : "", wanted_base, (*Char(wanted_base) && *Char(interface_list)) ?	// Interfaces
+#ifndef WITHOUT_RBFX
+	   ", " : "", interface_list, " {", csbody_tm,	// main body of class
+#else
 	   ", " : "", interface_list, " {", derived ? typemapLookup(n, "csbody_derived", typemap_lookup_type, WARN_CSHARP_TYPEMAP_CSBODY_UNDEF) :	// main body of class
 	   typemapLookup(n, "csbody", typemap_lookup_type, WARN_CSHARP_TYPEMAP_CSBODY_UNDEF),	// main body of class
+#endif
 	   NIL);
 
     // C++ destructor is wrapped by the Finalize and Dispose methods
@@ -1944,19 +2068,36 @@ public:
     if (feature_director) {
       // Generate director connect method
       // put this in classDirectorEnd ???
+#ifndef WITHOUT_RBFX
+      Printf(proxy_class_code, "  private void SetupSwigDirector() {\n");
+      Printf(proxy_class_code, "    var classType = typeof(%s);\n", proxy_class_name);
+      Printv(proxy_class_code, director_override_status_init, NIL);
+      Printf(proxy_class_code, "  }\n\n");
+      Printf(proxy_class_code, "  private void ConnectSwigDirector() {\n");
+      Printf(proxy_class_code, "    SetupSwigDirector();\n");
+#else
       Printf(proxy_class_code, "  private void SwigDirectorConnect() {\n");
-
+#endif
       int i;
       for (i = first_class_dmethod; i < curr_class_dmethod; ++i) {
 	UpcallData *udata = Getitem(dmethods_seq, i);
 	String *method = Getattr(udata, "method");
 	String *methid = Getattr(udata, "class_methodidx");
 	String *overname = Getattr(udata, "overname");
+#ifndef WITHOUT_RBFX
+	Printf(proxy_class_code, "    if (swigMethodOverriden%s)\n", methid);
+#else
 	Printf(proxy_class_code, "    if (SwigDerivedClassHasMethod(\"%s\", swigMethodTypes%s))\n", method, methid);
+#endif
 	Printf(proxy_class_code, "      swigDelegate%s = new SwigDelegate%s_%s(SwigDirectorMethod%s);\n", methid, proxy_class_name, methid, overname);
       }
       String *director_connect_method_name = Swig_name_member(getNSpace(), getClassPrefix(), "director_connect");
+// #ifndef WITHOUT_RBFX
+//       Printf(proxy_class_code, "    var gcHandle = global::System.Runtime.InteropServices.GCHandle.ToIntPtr(global::System.Runtime.InteropServices.GCHandle.Alloc(this));\n");
+//       Printf(proxy_class_code, "    %s.%s(swigCPtr, gcHandle", imclass_name, director_connect_method_name);
+// #else
       Printf(proxy_class_code, "    %s.%s(swigCPtr", imclass_name, director_connect_method_name);
+// #endif
       for (i = first_class_dmethod; i < curr_class_dmethod; ++i) {
 	UpcallData *udata = Getitem(dmethods_seq, i);
 	String *methid = Getattr(udata, "class_methodidx");
@@ -1964,7 +2105,7 @@ public:
       }
       Printf(proxy_class_code, ");\n");
       Printf(proxy_class_code, "  }\n");
-
+#ifdef WITHOUT_RBFX
       if (first_class_dmethod < curr_class_dmethod) {
 	// Only emit if there is at least one director method
 	Printf(proxy_class_code, "\n");
@@ -1994,7 +2135,7 @@ public:
 	Printf(proxy_class_code, "    return hasDerivedMethod;\n");
 	Printf(proxy_class_code, "  }\n");
       }
-
+#endif
       if (Len(director_delegate_callback) > 0)
 	Printv(proxy_class_code, director_delegate_callback, NIL);
       if (Len(director_delegate_definitions) > 0)
@@ -2003,7 +2144,16 @@ public:
 	Printv(proxy_class_code, "\n", director_delegate_instances, NIL);
       if (Len(director_method_types) > 0)
 	Printv(proxy_class_code, "\n", director_method_types, NIL);
+#ifndef WITHOUT_RBFX
+      if (Len(director_override_status) > 0)
+	Printv(proxy_class_code, "\n", director_override_status, NIL);
 
+      Printv(proxy_class_code, "\n", NIL);
+      Delete(director_override_status);
+      director_override_status = NULL;
+      Delete(director_override_status_init);
+      director_override_status_init = NULL;
+#endif
       Delete(director_callback_typedefs);
       director_callback_typedefs = NULL;
       Delete(director_callbacks);
@@ -2025,7 +2175,9 @@ public:
     Delete(interface_list);
     Delete(attributes);
     Delete(destruct);
-
+#ifndef WITHOUT_RBFX
+    Delete(csbody_tm);
+#endif
     // Emit extra user code
     Printv(proxy_class_def, typemapLookup(n, "cscode", typemap_lookup_type, WARN_NONE),	// extra C# code
 	   "\n", NIL);
@@ -2038,6 +2190,48 @@ public:
 
     Delete(smart);
     Delete(baseclass);
+
+#ifndef WITHOUT_RBFX
+    // TypeId functions
+    if (CPlusPlus) {
+      String *typeid_method_name = Swig_name_member(getNSpace(), getClassPrefix(), "SWIGTypeId");
+      String *wname = Swig_name_wrapper(typeid_method_name);
+
+      Printv(imclass_cppcasts_code, "\n  [global::System.Runtime.InteropServices.DllImport(", dllimport, ", EntryPoint=\"", wname, "\")]\n", NIL);
+      Printf(imclass_cppcasts_code, "  public static extern global::System.IntPtr %s(global::System.IntPtr jarg1);\n", typeid_method_name);
+
+      Replaceall(imclass_cppcasts_code, "$csclassname", proxy_class_name);
+
+      Printv(typeid_cppcode,
+      "SWIGEXPORT size_t SWIGSTDCALL ", wname, "(", c_classname, " *jarg1) {\n",
+      "    return typeid(*jarg1).hash_code();\n"
+      "}\n\n", NIL);
+
+      Delete(wname);
+      Delete(typeid_method_name);
+
+
+      typeid_method_name = Swig_name_member(getNSpace(), getClassPrefix(), "SWIGTypeIdStatic");
+      wname = Swig_name_wrapper(typeid_method_name);
+
+      Printv(imclass_cppcasts_code, "\n  [global::System.Runtime.InteropServices.DllImport(", dllimport, ", EntryPoint=\"", wname, "\")]\n", NIL);
+      Printf(imclass_cppcasts_code, "  public static extern global::System.IntPtr %s();\n", typeid_method_name);
+
+      Replaceall(imclass_cppcasts_code, "$csclassname", proxy_class_name);
+
+      Printv(typeid_cppcode,
+      "SWIGEXPORT size_t SWIGSTDCALL ", wname, "() {\n",
+      "    return typeid(", c_classname, ").hash_code();\n"
+      "}\n\n", NIL);
+
+      String* scope = getCurrentScopeName(NIL);
+      Printv(typeid_imcode, "    SWIGTypeRegistry[", typeid_method_name, "()] = typeof(", scope, ");\n", NIL);
+
+      Delete(scope);
+      Delete(wname);
+      Delete(typeid_method_name);
+    }
+#endif
   }
 
   /* ----------------------------------------------------------------------
@@ -2195,6 +2389,16 @@ public:
       Replaceall(proxy_class_constants_code, "$imclassname", full_imclass_name);
       Replaceall(interface_class_code, "$imclassname", full_imclass_name);
 
+#ifndef WITHOUT_RBFX
+      Replaceall(proxy_class_def, "$dllimport_module", dllimport_module);
+      Replaceall(proxy_class_code, "$dllimport_module", dllimport_module);
+      Replaceall(proxy_class_constants_code, "$dllimport_module", dllimport_module);
+      Replaceall(interface_class_code, "$dllimport_module", dllimport_module);
+      Replaceall(proxy_class_def, "$nspace", namespce);
+      Replaceall(proxy_class_code, "$nspace", namespce);
+      Replaceall(proxy_class_constants_code, "$nspace", namespce);
+      Replaceall(interface_class_code, "$nspace", namespce);
+#endif
       Replaceall(proxy_class_def, "$dllimport", dllimport);
       Replaceall(proxy_class_code, "$dllimport", dllimport);
       Replaceall(proxy_class_constants_code, "$dllimport", dllimport);
@@ -2562,11 +2766,17 @@ public:
 	  UpcallData *udata = Getattr(directorNode, "upcalldata");
 	  String *methid = Getattr(udata, "class_methodidx");
 
+#ifndef WITHOUT_RBFX
+	  if (!Cmp(return_type, "void"))
+	    Printf(excode, "if (swigMethodOverriden%s) %s; else %s", methid, ex_imcall, imcall);
+	  else
+	    Printf(excode, "(swigMethodOverriden%s ? %s : %s)", methid, ex_imcall, imcall);
+#else
 	  if (!Cmp(return_type, "void"))
 	    Printf(excode, "if (SwigDerivedClassHasMethod(\"%s\", swigMethodTypes%s)) %s; else %s", proxy_function_name, methid, ex_imcall, imcall);
 	  else
 	    Printf(excode, "(SwigDerivedClassHasMethod(\"%s\", swigMethodTypes%s) ? %s : %s)", proxy_function_name, methid, ex_imcall, imcall);
-
+#endif
 	  Clear(imcall);
 	  Printv(imcall, excode, NIL);
 	} else {
@@ -3436,6 +3646,9 @@ public:
     Delete(strippedtype);
     Delete(type);
 
+#ifndef WITHOUT_RBFX
+    Replaceall(tm, "$nspace", namespce);
+#endif
     return substitution_performed;
   }
 
@@ -3528,6 +3741,10 @@ public:
     Replaceall(swigtype, "$csclassname", classname);
     Replaceall(swigtype, "$module", module_class_name);
     Replaceall(swigtype, "$imclassname", imclass_name);
+#ifndef WITHOUT_RBFX
+    Replaceall(swigtype, "$dllimport_module", dllimport_module);
+    Replaceall(swigtype, "$nspace", namespce);
+#endif
     Replaceall(swigtype, "$dllimport", dllimport);
 
     // For unknown enums
@@ -3740,12 +3957,18 @@ public:
     if (nspace)
       Insert(qualified_classname, 0, NewStringf("%s.", nspace));
 
-    Printv(imclass_class_code, "\n  [global::System.Runtime.InteropServices.DllImport(\"", dllimport, "\", EntryPoint=\"", wname, "\")]\n", NIL);
+    Printv(imclass_class_code, "\n  [global::System.Runtime.InteropServices.DllImport(", dllimport, ", EntryPoint=\"", wname, "\")]\n", NIL);
+// #ifndef WITHOUT_RBFX
+//     Printf(imclass_class_code, "  public static extern void %s(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.IntPtr handle", swig_director_connect);
+//
+//     Wrapper *code_wrap = NewWrapper();
+//     Printf(code_wrap->def, "SWIGEXPORT void SWIGSTDCALL %s(void *objarg, void* handle", wname);
+// #else
     Printf(imclass_class_code, "  public static extern void %s(global::System.Runtime.InteropServices.HandleRef jarg1", swig_director_connect);
 
     Wrapper *code_wrap = NewWrapper();
     Printf(code_wrap->def, "SWIGEXPORT void SWIGSTDCALL %s(void *objarg", wname);
-
+// #endif
     if (smartptr) {
       Printf(code_wrap->code, "  %s *obj = (%s *)objarg;\n", smartptr, smartptr);
       Printf(code_wrap->code, "  // Keep a local instance of the smart pointer around while we are using the raw pointer\n");
@@ -3756,6 +3979,9 @@ public:
       Printf(code_wrap->code, "  %s *director = static_cast<%s *>(obj);\n", dirClassName, dirClassName);
     }
 
+// #ifndef WITHOUT_RBFX
+//     Printf(code_wrap->code, "  director->swig_managedObjectHandle = handle;\n");
+// #endif
     Printf(code_wrap->code, "  director->swig_connect_director(");
 
     for (int i = first_class_dmethod; i < curr_class_dmethod; ++i) {
@@ -3853,7 +4079,7 @@ public:
 	  if (SwigType_ispointer(returntype) || (typenode && Getattr(typenode, "abstracts"))) {
 	    /* initialize pointers to something sane. Same for abstract
 	       classes when a reference is returned. */
-	    Wrapper_add_localv(w, "c_result", SwigType_lstr(returntype, "c_result"), "= 0", NIL);
+	    Wrapper_add_localv(w, "c_result", SwigType_lstr(returntype, "c_result"), "= {}", NIL);
 	  } else {
 	    /* If returning a reference, initialize the pointer to a sane
 	       default - if a C# exception occurs, then the pointer returns
@@ -3900,10 +4126,21 @@ public:
 	  Printf(director_delegate_definitions, "  %s\n", im_directoroutattributes);
       }
 
+#ifndef WITHOUT_RBFX
+      Printf(callback_def, "#if __IOS__\n");
+      Printf(callback_def, "  [global::ObjCRuntime.MonoPInvokeCallback(typeof(SwigDelegate%s_<?next_method_id?>))]\n", classname);
+      Printf(callback_def, "#endif\n");
+      Printf(callback_def, "  static");
+#endif
       Printf(callback_def, "  private %s SwigDirectorMethod%s(", tm, overloaded_name);
       if (!ignored_method) {
 	const String *csdirectordelegatemodifiers = Getattr(n, "feature:csdirectordelegatemodifiers");
 	String *modifiers = (csdirectordelegatemodifiers ? NewStringf("%s%s", csdirectordelegatemodifiers, Len(csdirectordelegatemodifiers) > 0 ? " " : "") : NewStringf("public "));
+#ifndef WITHOUT_RBFX
+    Printf(director_delegate_definitions, "#if __IOS__\n");
+    Printf(director_delegate_definitions, "  [global::ObjCRuntime.MonoNativeFunctionWrapper]\n");
+    Printf(director_delegate_definitions, "#endif\n");
+#endif
 	Printf(director_delegate_definitions, "  %sdelegate %s", modifiers, tm);
 	Delete(modifiers);
       }
@@ -3914,7 +4151,7 @@ public:
     if ((c_ret_type = Swig_typemap_lookup("ctype", n, "", 0))) {
       if (!is_void && !ignored_method) {
 	String *jretval_decl = NewStringf("%s jresult", c_ret_type);
-	Wrapper_add_localv(w, "jresult", jretval_decl, "= 0", NIL);
+	Wrapper_add_localv(w, "jresult", jretval_decl, "= {}", NIL);
 	Delete(jretval_decl);
       }
     } else {
@@ -3988,7 +4225,7 @@ public:
 	/* Add to local variables */
 	Printf(c_decl, "%s %s", c_param_type, arg);
 	if (!ignored_method)
-	  Wrapper_add_localv(w, arg, c_decl, (!(SwigType_ispointer(pt) || SwigType_isreference(pt)) ? "" : "= 0"), NIL);
+	  Wrapper_add_localv(w, arg, c_decl, (!(SwigType_ispointer(pt) || SwigType_isreference(pt)) ? "" : "= {}"), NIL);
 
 	/* Add input marshalling code */
 	if ((tm = Getattr(p, "tmap:directorin"))) {
@@ -4152,7 +4389,11 @@ public:
     Append(declaration, ";\n");
 
     /* Finish off the inherited upcall's definition */
-
+#ifndef WITHOUT_RBFX
+    Printf(callback_def, "global::System.IntPtr _this");
+    if (Len(delegate_parms) > 0)
+      Printf(callback_def, ", ");
+#endif
     Printf(callback_def, "%s)", delegate_parms);
     Printf(callback_def, " {\n");
 
@@ -4162,6 +4403,11 @@ public:
 
     if ((tm = Swig_typemap_lookup("csdirectorout", n, "", 0))) {
       substituteClassname(returntype, tm);
+#ifndef WITHOUT_RBFX
+      Replaceall(tm, "$cscall", "global::$nspace.$csclassname.wrap(_this, false).$cscall");
+      Replaceall(tm, "$csclassname", classname);
+      Replaceall(tm, "$nspace", namespce);
+#endif
       Replaceall(tm, "$cscall", upcall);
       if (!is_void)
 	Insert(tm, 0, "return ");
@@ -4190,8 +4436,11 @@ public:
       if (!is_void)
 	Printf(w->code, "jresult = (%s) ", c_ret_type);
 
+#ifndef WITHOUT_RBFX
+      Printf(w->code, "swig_callback%s((void*)this%s%s);\n", overloaded_name, Len(jupcall_args) ? ", " : "" , jupcall_args);
+#else
       Printf(w->code, "swig_callback%s(%s);\n", overloaded_name, jupcall_args);
-
+#endif
       if (!is_void) {
 	String *jresult_str = NewString("jresult");
 	String *result_str = NewString("c_result");
@@ -4248,6 +4497,13 @@ public:
       Delete(extra_method_name);
     }
 
+#ifndef WITHOUT_RBFX
+    // This stupid goto stuff is to swap "emit the director method" and "Emit the actual upcall through" while not introducing too big
+    // of a change delta.
+    goto emit_upcall;
+emit_director_method:
+#endif
+
     /* emit the director method */
     if (status == SWIG_OK && output_director) {
       if (!is_void) {
@@ -4265,24 +4521,58 @@ public:
       }
     }
 
+#ifndef WITHOUT_RBFX
+    goto director_done;
+emit_upcall:
+#endif
+
     if (!ignored_method) {
       /* Emit the actual upcall through */
       UpcallData *udata = addUpcallMethod(imclass_dmethod, symname, decl, overloaded_name);
       String *methid = Getattr(udata, "class_methodidx");
       Setattr(n, "upcalldata", udata);
+#ifndef WITHOUT_RBFX
+      // All attempts to get method id earlier resulted in broken code. Figuring this mess proved to be too time consuming. Replacing marker
+      // is definitely stupid, but it works.
+      Replaceall(callback_def, "<?next_method_id?>", methid);
+#endif
       /*
       Printf(stdout, "setting upcalldata, nodeType: %s %s::%s %p\n", nodeType(n), classname, Getattr(n, "name"), n);
       */
 
       Printf(director_callback_typedefs, "    typedef %s (SWIGSTDCALL* SWIG_Callback%s_t)(", c_ret_type, methid);
+#ifndef WITHOUT_RBFX
+      Printf(director_callback_typedefs, "void* _this%s", Len(callback_typedef_parms) ? ", " : "");
+#endif
       Printf(director_callback_typedefs, "%s);\n", callback_typedef_parms);
       Printf(director_callbacks, "    SWIG_Callback%s_t swig_callback%s;\n", methid, overloaded_name);
 
+#ifndef WITHOUT_RBFX
+      Printf(director_delegate_definitions, " SwigDelegate%s_%s(global::System.IntPtr _this%s%s);\n", classname, methid, Len(delegate_parms) ? ", " : "", delegate_parms);
+#else
       Printf(director_delegate_definitions, " SwigDelegate%s_%s(%s);\n", classname, methid, delegate_parms);
+#endif
+#ifndef WITHOUT_RBFX
+      Printf(director_delegate_instances, "  [global::System.Diagnostics.DebuggerBrowsable(global::System.Diagnostics.DebuggerBrowsableState.Never)]\n");
+#endif
       Printf(director_delegate_instances, "  private SwigDelegate%s_%s swigDelegate%s;\n", classname, methid, methid);
+#ifndef WITHOUT_RBFX
+      Printf(director_method_types, "  [global::System.Diagnostics.DebuggerBrowsable(global::System.Diagnostics.DebuggerBrowsableState.Never)]\n");
+#endif
       Printf(director_method_types, "  private static global::System.Type[] swigMethodTypes%s = new global::System.Type[] { %s };\n", methid, proxy_method_types);
+#ifndef WITHOUT_RBFX
+      String *method = Getattr(udata, "method");
+      Printf(director_override_status, "  [global::System.Diagnostics.DebuggerBrowsable(global::System.Diagnostics.DebuggerBrowsableState.Never)]\n");
+      Printf(director_override_status, "  private bool swigMethodOverriden%s;\n", methid);
+      Printf(director_override_status_init, "    swigMethodOverriden%s = %s.SwigDerivedClassHasMethod(this, \"%s\", classType, swigMethodTypes%s);\n", methid, imclass_name, method, methid);
+#endif
       Printf(director_connect_parms, "SwigDirector%s%s delegate%s", classname, methid, methid);
     }
+    
+#ifndef WITHOUT_RBFX
+    goto emit_director_method;
+director_done:
+#endif
 
     Delete(pre_code);
     Delete(post_code);
@@ -4393,6 +4683,12 @@ public:
     directorDeclaration(n);
 
     Printf(f_directors_h, "%s {\n", Getattr(n, "director:decl"));
+
+#ifndef WITHOUT_RBFX
+    Printv(f_directors_h, typemapLookup(n, "directorbody", Getattr(n, "classtypeobj"),
+      WARN_CSHARP_TYPEMAP_CLASSMOD_UNDEF), "\n", NIL);
+#endif
+
     Printf(f_directors_h, "\npublic:\n");
 
     /* Keep track of the director methods for this class */
@@ -4404,6 +4700,10 @@ public:
     director_delegate_definitions = NewString("");
     director_delegate_instances = NewString("");
     director_method_types = NewString("");
+#ifndef WITHOUT_RBFX
+    director_override_status = NewString("");
+    director_override_status_init = NewString("");
+#endif
     director_connect_parms = NewString("");
 
     return Language::classDirectorInit(n);
@@ -4416,6 +4716,10 @@ public:
     String *old_director_delegate_definitions = director_delegate_definitions;
     String *old_director_delegate_instances = director_delegate_instances;
     String *old_director_method_types = director_method_types;
+#ifndef WITHOUT_RBFX
+    String *old_director_override_status = director_override_status;
+    String *old_director_override_status_init = director_override_status_init;
+#endif
     String *old_director_connect_parms = director_connect_parms;
 
     int ret = Language::classDeclaration(n);
@@ -4427,6 +4731,10 @@ public:
     director_delegate_definitions = old_director_delegate_definitions;
     director_delegate_instances = old_director_delegate_instances;
     director_method_types = old_director_method_types;
+#ifndef WITHOUT_RBFX
+    director_override_status = old_director_override_status;
+    director_override_status_init = old_director_override_status_init;
+#endif
     director_connect_parms = old_director_connect_parms;
 
     return ret;
@@ -4475,6 +4783,9 @@ public:
       Printf(f_directors_h, "\n%s", director_callback_typedefs);
     }
 
+// #ifndef WITHOUT_RBFX
+//     Printf(f_directors_h, "    void* swig_managedObjectHandle;\n");
+// #endif
     Printf(f_directors_h, "    void swig_connect_director(");
 
     Printf(w->def, "void %s::swig_connect_director(", dirclassname);

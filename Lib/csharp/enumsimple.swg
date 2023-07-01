@@ -82,7 +82,8 @@
 %typemap(csimports)        enum SWIGTYPE ""
 %typemap(csinterfaces)     enum SWIGTYPE ""
 
-%typemap(csbody) enum SWIGTYPE ""
+// rbfx: $directorsetup addition.
+%typemap(csbody, directorsetup="") enum SWIGTYPE ""
 
 %csenum(simple);
 
